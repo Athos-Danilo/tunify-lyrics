@@ -1,48 +1,81 @@
-# 📻 Tunify Letras API — Microserviço de Processamento Assíncrono em Go
+# 📻 Tunify Letras Microservice (Worker & API em Go)
 
 [![Go Version](https://img.shields.io/badge/Go-1.20+-00ADD8?style=flat&logo=go)](https://go.dev/)
 [![Database](https://img.shields.io/badge/Database-MongoDB-47A248?style=flat&logo=mongodb)](https://www.mongodb.com/)
 [![Ecossistema](https://img.shields.io/badge/Ecossistema-Tunify-0285FF?style=flat)](https://github.com/athosdanilo/tunify)
 
-Este é o microserviço oficial de captura, processamento e sincronização de letras musicais do ecossistema **Tunify** — uma plataforma de streaming e player musical em constante evolução, projetada como um portfólio vivo de arquitetura de software de alta performance.
+Este é o microserviço oficial de captura, processamento e sincronização de letras musicais do ecossistema **Tunify** — uma plataforma de Engenharia Musical e curadoria algorítmica orientada a dados. 
 
-Diferente da concepção inicial de busca síncrona (onde o usuário esperava o scraping em tempo real), esta versão implementa uma **Arquitetura Orientada a Filas em Segundo Plano (Worker Pattern)** integrada ao **MongoDB**, otimizada especificamente para operar de forma extremamente econômica em ambientes de hospedagem gratuitos (Free Tier).
+Diferente da concepção inicial de busca síncrona (onde o usuário esperava o scraping em tempo real), esta versão implementa uma **Arquitetura Orientada a Filas em Segundo Plano (Worker Pattern)** integrada ao **MongoDB**, otimizada especificamente para operar de forma incrivelmente rápida para o usuário final e econômica em ambientes de nuvem (Free Tier).
 
 ---
 
 ## 🎯 O que é o Tunify?
 
-O **Tunify** é uma aplicação completa de player musical web e mobile que se conecta a serviços de música para fornecer uma experiência de usuário premium, minimalista e fluida. Ele engloba desde o gerenciamento de filas de reprodução inteligentes até interfaces imersivas baseadas na identidade visual das capas dos álbuns (como o sistema de extração de cores dinâmicas). 
+O **Tunify** é uma plataforma de "Engenharia Musical" e curadoria algorítmica que estende as capacidades nativas do ecossistema Spotify. Utilizando **Ciência de Dados (Data Science)** e **Teoria dos Grafos**, o Tunify capacita o usuário a atuar como um arquiteto de suas próprias playlists, oferecendo controle granular sobre a experiência auditiva através da manipulação de vetores matemáticos como Valência, Energia e Tempo.
 
-A **Tunify Letras API** nasce para preencher a única lacuna deixada pelas APIs tradicionais de players: o fornecimento de letras de música estruturadas e, sempre que possível, perfeitamente sincronizadas com o tempo da reprodução (estilo Karaokê).
+O **Tunify Letras Microservice** nasce para preencher uma lacuna fundamental na experiência imersiva da plataforma: o fornecimento de letras de música estruturadas e, sempre que possível, perfeitamente sincronizadas com o tempo da reprodução (estilo Karaokê), complementando as complexas jornadas sonoras geradas pelo sistema central.
 
 ---
 
 ## 💡 Arquitetura do Sistema e Design Dinâmico
 
-Para garantir resiliência, baixo consumo de infraestrutura e performance instantânea para o usuário final, o microserviço foi reestruturado sob os seguintes pilares de engenharia:
+Para garantir resiliência, baixo consumo de infraestrutura e performance instantânea, o microserviço foi reestruturado sob os seguintes pilares de engenharia:
 
 ### 1. Consumo Instantâneo vs. Processamento Assíncrono (Trade-off)
 Fazer varreduras em sites externos em tempo real gera latência e instabilidade. Na nova arquitetura, o aplicativo Angular nunca espera o robô fazer o scraping. 
-* Se uma música nunca foi tocada na plataforma antes, ela entra na fila com o estado `PENDENTE`. O front-end exibe uma mensagem amigável e honesta informando que o processamento foi agendado.
+* Se uma música nunca foi tocada na plataforma antes, ela entra na fila com o estado `PENDENTE`. O front-end exibe uma mensagem amigável informando que o processamento foi agendado.
 * A partir da segunda vez que qualquer usuário tocar a mesma música no ecossistema Tunify, a letra já estará disponível para consumo imediato diretamente do banco de dados, carregando em menos de 10 milissegundos.
 
 ### 2. O Robô com "Horário de Expediente" (Cron Job com Lock de Segurança)
-Para evitar o consumo contínuo e desnecessário de CPU em plataformas como Render ou Vercel (que limitam as horas de execução em planos gratuitos), o robô em Go não roda em loop infinito na nuvem.
-* Ele é despertado periodicamente (ex: a cada hora) através de um gatilho agendado (Cron Job).
-* **Mecanismo de Lock (Trava):** Para evitar condições de corrida (Race Conditions) — como o robô acordar novamente enquanto o ciclo anterior ainda está processando uma fila longa —, a primeira ação do Go é verificar e criar uma "Trava de Processamento" no banco. Se o robô anterior ainda estiver ativo, a nova instância encerra sua execução pacificamente, protegendo a integridade dos dados e economizando processamento.
+Para evitar o consumo contínuo e desnecessário de CPU em plataformas Serverless/PaaS, o robô em Go não roda em loop infinito na nuvem.
+* Ele é despertado periodicamente através de um gatilho agendado (Cron Job) ou chamada HTTP.
+* **Mecanismo de Lock (Trava):** Para evitar condições de corrida (*Race Conditions*) — como o robô acordar novamente enquanto o ciclo anterior ainda está processando uma fila longa —, a primeira ação do Go é verificar e criar uma "Trava de Processamento" no banco. Se o robô anterior ainda estiver ativo, a nova instância encerra sua execução pacificamente.
 
 ### 3. Estratégia de Busca em Cascata (Degradação Suave / Fallback)
-O robô foi projetado para ser um caçador resiliente, operando em três níveis de prioridade para cobrir tanto o cenário de músicas globais quanto o acervo nacional/regional brasileiro:
-1. **Nível Ouro (LRCLIB):** O robô tenta buscar a letra na API da LRCLIB. Se encontrar, extrai o texto com os metadados de milissegundos (`[00:12.50]Texto`), salvando no banco com a flag `sincronizada: true` para ativar a interface estilo Karaokê no Angular.
-2. **Nível Prata (Letras.mus.br / Genius):** Caso a música não possua sincronia na LRCLIB (muito comum em faixas nacionais específicas), o robô realiza o *web scraping* tradicional em portais brasileiros consolidando o texto limpo, salvando com a flag `sincronizada: false` (exibição em modo de rolagem simples).
-3. **Nível Bronze (Não Encontrada):** Se após 3 tentativas o robô falhar em todas as fontes (músicas estritamente instrumentais ou inválidas), o status é alterado para `NAO_ENCONTRADA`, impedindo que o sistema gaste recursos tentando processar uma faixa impossível repetidamente.
+O robô opera em três níveis de prioridade para cobrir o cenário global e o acervo nacional brasileiro:
+1. **Nível Ouro (LRCLIB):** Tenta buscar a letra na API da LRCLIB. Se encontrar, extrai o texto com os metadados de tempo (`[00:12.50]Texto`), salvando com a flag `sincronizada: true` para ativar a interface Karaokê no Angular.
+2. **Nível Prata (Letras.mus.br / Genius):** Caso não possua sincronia, o robô realiza o *web scraping* tradicional consolidando o texto limpo, salvando com `sincronizada: false` (modo rolagem simples).
+3. **Nível Bronze (Não Encontrada):** Se esgotadas as tentativas em todas as fontes, o status vai para `NAO_ENCONTRADA`, impedindo requisições inúteis em execuções futuras.
+
+---
+
+## 🔄 Fluxo de Processamento de Letras
+
+```mermaid
+sequenceDiagram
+    participant U as Usuário (Angular)
+    participant B as Backend Principal (FastAPI)
+    participant M as MongoDB
+    participant G as Go Worker (Letras)
+    participant E as APIS Externas / Scraping
+
+    U->>B: Toca Música Inédita
+    B->>M: Insere Letra como PENDENTE
+    B-->>U: Retorna Status "Processando..."
+    Note over G: CRON JOB desperta o Worker Go
+    G->>M: Verifica Fila (PENDENTES) & Aplica Lock
+    G->>E: Busca na LRCLIB (Prioridade 1)
+    alt Sucesso LRCLIB
+        E-->>G: Retorna Letra Sincronizada
+        G->>M: Atualiza Status para CONCLUIDO (sincronizada: true)
+    else Falha LRCLIB
+        G->>E: Faz Scraping Letras.mus / Genius
+        E-->>G: Retorna Texto Limpo
+        G->>M: Atualiza Status para CONCLUIDO (sincronizada: false)
+    end
+    Note over U: Futuro / Outro Usuário
+    U->>B: Toca a Mesma Música
+    B->>M: Lê o banco (Consulta Rápida)
+    M-->>B: Retorna Documento da Letra
+    B-->>U: Letra Imediata (<10ms)
+```
 
 ---
 
 ## 🗃️ Estrutura do Banco de Dados (Schema MongoDB)
 
-A coleção no MongoDB chama-se `Letras` e foi totalmente padronizada em português para garantir máxima clareza semântica durante o desenvolvimento. Cada documento segue rigorosamente o modelo abaixo:
+A coleção `Letras` foi padronizada para garantir clareza semântica:
 
 ```json
 {
@@ -60,15 +93,50 @@ A coleção no MongoDB chama-se `Letras` e foi totalmente padronizada em portugu
 }
 ```
 
-## Ciclo de Vida dos Estados (`status`):
+### Ciclo de Vida dos Estados (`status`):
+* `PENDENTE`: Música recém-identificada aguardando ativação do robô.
+* `PROCESSANDO`: O robô capturou a faixa da fila e está operando (*lock*).
+* `CONCLUIDO`: Letra extraída com sucesso e pronta para consumo.
+* `NAO_ENCONTRADA`: Esgotadas todas as tentativas de busca.
 
-* `PENDENTE`: Música recém-identificada que aguarda a próxima ativação do robô.
-* `PROCESSANDO`: O robô capturou a faixa da fila e está realizando as requisições externas (*lock* a nível de documento).
-* `CONCLUIDO`: Letra extraída com sucesso e pronta para o consumo.
-* `NAO_ENCONTRADA`: Esgotadas as tentativas de busca nas fontes mapeadas.
+---
+
+## 🚀 Como Executar Localmente
+
+### Pré-requisitos
+- [Go 1.20+](https://go.dev/) instalado.
+- Acesso a um banco [MongoDB](https://www.mongodb.com/) (Local ou cluster Atlas).
+
+### 1. Clonar e Instalar Dependências
+```bash
+git clone https://github.com/athosdanilo/tunify-letras.git
+cd tunify-letras
+go mod download
+```
+
+### 2. Configurar Variáveis de Ambiente
+Crie um arquivo `.env` na raiz do projeto contendo as credenciais de acesso:
+```env
+MONGO_URI=mongodb+srv://<usuario>:<senha>@cluster.mongodb.net/?retryWrites=true&w=majority
+DATABASE_NAME=tunify
+```
+
+### 3. Executar o Serviço
+Para rodar o microserviço em modo de desenvolvimento:
+```bash
+go run main.go
+```
+
+Para gerar um binário compilado (ideal para implantação em produção):
+```bash
+go build -o tunify-letras main.go
+./tunify-letras
+```
+
+---
 
 ## 🛠️ Tecnologias Utilizadas
-* **Linguagem Principal:** Go (Golang) — Escolhida pela performance, concorrência nativa e geração de binários minúsculos ideais para microserviços.
-* **Web Scraping & Parsing:** `goquery` — Navegação idiomática no DOM HTML inspirada na sintaxe do jQuery.
+* **Linguagem:** Go (Golang) — Concorrência nativa e geração de binários minúsculos.
+* **Scraping & Parsing:** `goquery` — Navegação idiomática no DOM HTML.
 * **Banco de Dados:** MongoDB (Driver Oficial `go.mongodb.org/mongo-driver`).
-* **Comunicação de Rede:** Biblioteca padrão `net/http` do Go, mantendo o serviço enxuto e livre de *frameworks* pesados.
+* **Rede/APIs:** Biblioteca padrão `net/http` do Go, eliminando dependência de *frameworks* pesados.
