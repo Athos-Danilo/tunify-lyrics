@@ -12,6 +12,7 @@ import (
 	// Importamos nossos próprios pacotes.
 	"tunify-lyrics-api/db"
 	"tunify-lyrics-api/models"
+	"tunify-lyrics-api/tasks"
 
 	"github.com/joho/godotenv"
 	"go.mongodb.org/mongo-driver/bson"
@@ -27,6 +28,10 @@ func main() {
 
 	// Chama a função que criada no connection.go.
 	db.ConectarMongoDB()
+
+	// 🚨 2. LIGA O ROBÔ EM SEGUNDO PLANO (Goroutine)
+	// O robô vai rodar infinitamente sem travar o resto da API!
+	go tasks.IniciarRobo()
 
 	// ROTA DE HEALTH CHECK:Todo microserviço profissional tem uma rota raiz ("/") que serve só para
 	// ferramentas de monitoramento saberem se o servidor está vivo e respirando.
