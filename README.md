@@ -6,8 +6,6 @@
 
 Este é o microserviço oficial de captura, processamento e sincronização de letras musicais do ecossistema **Tunify** — uma plataforma de Engenharia Musical e curadoria algorítmica orientada a dados. 
 
-Diferente da concepção inicial de busca síncrona (onde o usuário esperava o scraping em tempo real), esta versão implementa uma **Arquitetura Orientada a Filas em Segundo Plano (Worker Pattern)** integrada ao **MongoDB**, otimizada especificamente para operar de forma incrivelmente rápida para o usuário final e econômica em ambientes de nuvem (Free Tier).
-
 ---
 
 ## 🎯 O que é o Tunify?
