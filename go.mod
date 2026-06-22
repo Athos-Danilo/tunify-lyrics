@@ -1,4 +1,4 @@
-module tunify-lyrics-api
+module github.com/athosdanilo/tunify-letras
 
 go 1.26.3
 

@@ -12,23 +12,24 @@ Para garantir a máxima performance com o menor consumo de infraestrutura possí
 - **Resiliência e Tolerância a Falhas:**
   - Implementação de retries com *Exponential Backoff* nas chamadas a APIs externas.
   - Prevenção de travamentos (*Deadlocks*) com uso correto de Contextos (`context.Context`) e Timeouts em todas as requisições HTTP e do Banco de Dados.
-- **Alta Performance:** Uso de *Worker Pools* para limitar e otimizar a quantidade máxima de goroutines executadas simultaneamente durante os picos de varredura de fila.
+- **Alta Performance:** Uso de *Worker Pools* para limitar e otimizar a quantidade máxima de goroutines executadas simultualmente durante os picos de varredura de fila.
 - **Empacotamento Cirúrgico:** Dockerfile *Multi-stage build* terminando em uma imagem `scratch` ou `alpine` (garantindo contêineres extremamente leves, geralmente com menos de 20MB).
+- **Comentários no Código:** Escrever comentários no código para facilitar o entendimento e a manutenção, garantindo que qualquer pessoa que ler o código entenda a lógica.
 
 ---
 
 ## 🎯 Épico 1: Setup e Infraestrutura Base
-- [ ] **Configuração do Projeto Go:**
+- [x] **Configuração do Projeto Go:**
   - Inicializar o módulo (`go mod init github.com/athosdanilo/tunify-letras`).
   - Estruturar os diretórios (ex: `cmd/`, `internal/`, `pkg/`).
-- [ ] **Gerenciamento de Configurações:**
+- [x] **Gerenciamento de Configurações:**
   - Implementar leitura e validação de variáveis de ambiente (`.env`) via biblioteca nativa ou `godotenv`.
   - Definir variáveis essenciais (`MONGO_URI`, `DATABASE_NAME`, `CRON_INTERVAL`, `PORT`).
-- [ ] **Conexão com o Banco de Dados (MongoDB):**
+- [x] **Conexão com o Banco de Dados (MongoDB):**
   - Configurar conexão segura via driver `go.mongodb.org/mongo-driver`.
   - Implementar Padrão Singleton para gerir o *Connection Pool* e evitar estouro de conexões.
   - Configurar índices no MongoDB (ex: índice composto em `status` e `atualizado_em` para buscas ultra-rápidas na fila).
-- [ ] **Logger Estruturado:**
+- [x] **Logger Estruturado:**
   - Configurar logs no padrão JSON para fácil rastreabilidade no terminal e integração com plataformas de observabilidade, usando a biblioteca nativa `slog` (Go 1.21+) ou `zap`.
 
 ## 🎯 Épico 2: Repositório e Gestão de Estado
