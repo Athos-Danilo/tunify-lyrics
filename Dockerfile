@@ -1,5 +1,5 @@
 # Etapa 1: Build
-FROM golang:1.22-alpine AS builder
+FROM golang:alpine AS builder
 
 # Instala certificados SSL e timezone (necessário para a imagem scratch depois e https scraping)
 RUN apk add --no-cache ca-certificates tzdata
