@@ -84,9 +84,9 @@ Para garantir a máxima performance com o menor consumo de infraestrutura possí
   - Configurar `golangci-lint` para garantir que o padrão ouro da linguagem seja seguido em todos os arquivos de código.
 
 ## 🎯 Épico 7: Distribuição e Deploy Minimalista
-- [ ] **Dockerização Multi-stage:**
+- [x] **Dockerização Multi-stage:**
   - Etapa 1: Imagem `golang:alpine`, baixar dependências `go mod`, rodar testes e compilar binário com tags de otimização (`-s -w` e `CGO_ENABLED=0`).
   - Etapa 2: Imagem final baseada puramente em `scratch` ou pacote mínimo `alpine`.
   - Configurar um `USER` sem privilégios dentro do Docker para segurança máxima.
-- [ ] **Documentação Extra:**
+- [x] **Documentação Extra:**
   - Deixar no repositório comandos úteis de Makefile para rodar o app rapidamente.
