@@ -53,6 +53,12 @@ func (w *LyricsWorker) Stop() {
 	w.logger.Info("Worker parado")
 }
 
+// Trigger executa o ciclo do worker imediatamente em uma goroutine, ignorando o Cron
+func (w *LyricsWorker) Trigger() {
+	w.logger.Info("Trigger acionado!")
+	go w.processarFila()
+}
+
 // processarFila é a função principal executada a cada "tick" do cron
 func (w *LyricsWorker) processarFila() {
 	if w.isRunning {

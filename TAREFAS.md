@@ -57,22 +57,22 @@ Para garantir a máxima performance com o menor consumo de infraestrutura possí
   - Lógica de fluxo: Tenta `Ouro` -> Se falhar ou estiver indisponível -> Tenta `Prata` -> Se falhar -> Exaure as tentativas e encerra como `NAO_ENCONTRADA`.
 
 ## 🎯 Épico 4: Motor de Processamento Assíncrono (Worker)
-- [ ] **Agendador Cron Embutido (Trabalhador Calmo):**
+- [x] **Agendador Cron Embutido (Trabalhador Calmo):**
   - Integrar pacote (como `robfig/cron/v3`) ou usar um Ticker nativo (`time.Ticker`).
   - Configurar para despertar de forma leve a cada 15 a 30 minutos, poupando a nuvem (Free Tier).
-- [ ] **Gerenciamento de Fila com Cota e Fila Justa (*Fair Queuing*):**
+- [x] **Gerenciamento de Fila com Cota e Fila Justa (*Fair Queuing*):**
   - Controlar as cotas usando variáveis de ambiente (ex: 100 globais diárias, limite de 20 por usuário diárias).
   - Desenvolver uma `aggregation pipeline` ou lógica no MongoDB para puxar as tarefas em padrão *Round Robin* por `id_usuario` (2 letras de um, 2 do outro) não deixando um "super usuário" dominar o ciclo do cron.
-- [ ] **Proteção de IP e Profilaxia (Jitter/Sleep):**
+- [x] **Proteção de IP e Profilaxia (Jitter/Sleep):**
   - Inserir um `time.Sleep` de cerca de 5 segundos entre cada requisição processada dentro de um lote. Isso previne tomar blocos HTTP `429` ou de WAF (Cloudflare) provenientes do site de letras por "acesso rápido demais".
   - Se tomar `429 Too Many Requests`, acionar o *Exponential Backoff* ou suspender a fila totalmente por horas (Retiro Espiritual).
 
 ## 🎯 Épico 5: Interface de Controle (API REST em Go)
-- [ ] **Servidor HTTP Extremamente Leve:**
+- [x] **Servidor HTTP Extremamente Leve:**
   - Subir servidor web nativo usando `net/http` ou o novo multiplexador do Go 1.22+.
-- [ ] **Endpoint `/health`:**
+- [x] **Endpoint `/health`:**
   - Rota `GET` que responde `200 OK` instantâneo. Essencial para contêineres na nuvem (ex: Render, AWS ECS) manterem a aplicação acordada e validarem se não houve Crash.
-- [ ] **Endpoint `/trigger` (Acionador Imediato):**
+- [x] **Endpoint `/trigger` (Acionador Imediato):**
   - Rota `POST` para forçar o Worker a iniciar o processamento da fila imediatamente, útil se o backend em Python (FastAPI) quiser avisar o Go: "Ei, acabei de inserir uma música na fila, acorde agora!".
 
 ## 🎯 Épico 6: Garantia de Qualidade e Testes Automáticos

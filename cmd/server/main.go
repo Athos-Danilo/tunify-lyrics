@@ -8,9 +8,15 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/athosdanilo/tunify-letras/internal/api"
 	"github.com/athosdanilo/tunify-letras/internal/config"
 	"github.com/athosdanilo/tunify-letras/internal/db"
 	"github.com/athosdanilo/tunify-letras/internal/logger"
+	"github.com/athosdanilo/tunify-letras/internal/lyrics"
+	"github.com/athosdanilo/tunify-letras/internal/lyrics/letrasmusbr"
+	"github.com/athosdanilo/tunify-letras/internal/lyrics/lrclib"
+	"github.com/athosdanilo/tunify-letras/internal/repository"
+	"github.com/athosdanilo/tunify-letras/internal/worker"
 )
 
 func main() {
@@ -24,14 +30,38 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Tenta obter a instância do banco de dados MongoDB (aciona o Singleton)
-	_, err := db.GetDatabase()
+	// Obtém a instância do banco de dados MongoDB (Singleton)
+	database, err := db.GetDatabase()
 	if err != nil {
 		logger.Log.Error("Falha crítica de banco de dados, parando o serviço", "error", err)
 		os.Exit(1)
 	}
 
-	logger.Log.Info("Setup Base Concluído com Sucesso! (Épico 1)")
+	// 1. Inicializa os Repositórios
+	letraRepo := repository.NewLetraRepository(database)
+	cotaRepo := repository.NewCotaRepository(database)
+
+	// 2. Inicializa os Motores de Letras e o FallbackManager
+	ouroProv := lrclib.NewProvider()
+	prataProv := letrasmusbr.NewProvider()
+	fallbackMgr := lyrics.NewFallbackManager(logger.Log, ouroProv, prataProv)
+
+	// 3. Inicializa o Motor Assíncrono (Worker)
+	lyricsWorker := worker.NewLyricsWorker(letraRepo, cotaRepo, fallbackMgr, logger.Log)
+	if err := lyricsWorker.Start(); err != nil {
+		logger.Log.Error("Erro ao iniciar o Worker", "error", err)
+		os.Exit(1)
+	}
+
+	// 4. Inicializa e sobe a API HTTP
+	apiServer := api.NewServer(config.Config.Port, lyricsWorker, logger.Log)
+	go func() {
+		if err := apiServer.Start(); err != nil {
+			logger.Log.Error("Servidor HTTP falhou", "error", err)
+		}
+	}()
+
+	logger.Log.Info("Todas as engrenagens ativadas. Sistema rodando perfeitamente!")
 	logger.Log.Info("Aguardando interrupção do sistema (Ctrl+C)...")
 
 	// Prepara um canal para escutar sinais do sistema operacional (ex: SIGINT, SIGTERM)
@@ -44,10 +74,17 @@ func main() {
 	// Inicia o processo de desligamento gracioso (Graceful Shutdown)
 	logger.Log.Info("Sinal de interrupção recebido. Desligando o sistema de forma graciosa...")
 	
-	// Dá até 5 segundos para limpar tudo antes de forçar a saída
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	
+	// Para o servidor HTTP
+	if err := apiServer.Shutdown(ctx); err != nil {
+		logger.Log.Error("Erro no shutdown da API HTTP", "error", err)
+	}
+
+	// Para o cron job do Worker
+	lyricsWorker.Stop()
+
 	// Fecha a conexão com o MongoDB
 	if err := db.Disconnect(ctx); err != nil {
 		logger.Log.Error("Erro ao desconectar do MongoDB", "error", err)
