@@ -76,11 +76,11 @@ Para garantir a máxima performance com o menor consumo de infraestrutura possí
   - Rota `POST` para forçar o Worker a iniciar o processamento da fila imediatamente, útil se o backend em Python (FastAPI) quiser avisar o Go: "Ei, acabei de inserir uma música na fila, acorde agora!".
 
 ## 🎯 Épico 6: Garantia de Qualidade e Testes Automáticos
-- [ ] **Testes Unitários da Regra de Negócio:**
+- [x] **Testes Unitários da Regra de Negócio:**
   - Usar pacotes nativos `testing` do Go.
   - Testar o "Orquestrador em Cascata" (Mockando falhas falsas no nível ouro para garantir que ele cai no nível prata adequadamente).
   - Testar o sanitizador de strings do Scraper do Letras.mus.br sem fazer chamadas HTTP de verdade.
-- [ ] **Proteção de Código Analítica (Linter):**
+- [x] **Proteção de Código Analítica (Linter):**
   - Configurar `golangci-lint` para garantir que o padrão ouro da linguagem seja seguido em todos os arquivos de código.
 
 ## 🎯 Épico 7: Distribuição e Deploy Minimalista

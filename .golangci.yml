@@ -1,0 +1,26 @@
+run:
+  timeout: 5m
+  tests: true
+
+linters:
+  enable:
+    - errcheck      # Verifica se erros foram ignorados
+    - gosimple      # Sugere simplificações de código
+    - govet         # Linter oficial do Go
+    - ineffassign   # Detecta atribuições não usadas
+    - staticcheck   # Análise estática avançada
+    - unused        # Variáveis e funções não usadas
+    - gofmt         # Formatação de código
+    - revive        # Regras de estilo rápidas
+    - goimports     # Verifica imports não usados
+
+linters-settings:
+  govet:
+    enable-all: true
+    disable:
+      - fieldalignment # Desabilitado para não poluir com avisos de padding de struct
+  revive:
+    rules:
+      - name: exported
+        arguments:
+          - "disableStutteringCheck"
