@@ -33,9 +33,10 @@ Para garantir a máxima performance com o menor consumo de infraestrutura possí
   - Configurar logs no padrão JSON para fácil rastreabilidade no terminal e integração com plataformas de observabilidade, usando a biblioteca nativa `slog` (Go 1.21+) ou `zap`.
 
 ## 🎯 Épico 2: Repositório e Gestão de Estado
-- [x] **Modelagem de Dados:**
+- [ ] **Modelagem de Dados:**
   - Criar o *Struct* Go (`model.Letra`) espelhando com perfeição a coleção de Letras do MongoDB usando as tags `bson`.
-- [x] **Operações Atômicas de Banco:**
+  - **Atenção:** Atualizar o *Struct* para garantir o mapeamento do campo `id_usuario` no futuro, para habilitar as restrições de limites mensais.
+- [ ] **Operações Atômicas de Banco:**
   - Criar método `BuscarMusicaPendente()`.
   - **Mecanismo de Lock Profissional:** Usar o comando `FindOneAndUpdate` do MongoDB para buscar um item com status `PENDENTE` e alterá-lo instantaneamente para `PROCESSANDO` em uma única operação atômica, eliminando totalmente o risco de *Race Conditions* (goroutines ou contêineres diferentes processando a mesma música ao mesmo tempo).
   - Criar método `AtualizarStatusMusica()` para salvar os resultados como `CONCLUIDO` (com ou sem sincronia) ou `NAO_ENCONTRADA`.
@@ -56,12 +57,15 @@ Para garantir a máxima performance com o menor consumo de infraestrutura possí
   - Lógica de fluxo: Tenta `Ouro` -> Se falhar ou estiver indisponível -> Tenta `Prata` -> Se falhar -> Exaure as tentativas e encerra como `NAO_ENCONTRADA`.
 
 ## 🎯 Épico 4: Motor de Processamento Assíncrono (Worker)
-- [ ] **Agendador Cron Embutido:**
+- [ ] **Agendador Cron Embutido (Trabalhador Calmo):**
   - Integrar pacote (como `robfig/cron/v3`) ou usar um Ticker nativo (`time.Ticker`).
-  - Configurar para despertar a cada ciclo de tempo (ex: 30 segundos ou 1 minuto).
-- [ ] **Gerenciamento de Fila e Paralelismo Seguro:**
-  - Ao despertar, o Worker busca um lote (ex: Top 10 mais antigas da fila).
-  - Distribuir o lote em *Goroutines* limitadas por um *Worker Pool* (ex: máximo de 5 requisições simultâneas) para garantir baixo impacto na CPU e não disparar bloqueios anti-DDoS nos sites raspados.
+  - Configurar para despertar de forma leve a cada 15 a 30 minutos, poupando a nuvem (Free Tier).
+- [ ] **Gerenciamento de Fila com Cota e Fila Justa (*Fair Queuing*):**
+  - Controlar as cotas usando variáveis de ambiente (ex: 100 globais diárias, limite de 20 por usuário diárias).
+  - Desenvolver uma `aggregation pipeline` ou lógica no MongoDB para puxar as tarefas em padrão *Round Robin* por `id_usuario` (2 letras de um, 2 do outro) não deixando um "super usuário" dominar o ciclo do cron.
+- [ ] **Proteção de IP e Profilaxia (Jitter/Sleep):**
+  - Inserir um `time.Sleep` de cerca de 5 segundos entre cada requisição processada dentro de um lote. Isso previne tomar blocos HTTP `429` ou de WAF (Cloudflare) provenientes do site de letras por "acesso rápido demais".
+  - Se tomar `429 Too Many Requests`, acionar o *Exponential Backoff* ou suspender a fila totalmente por horas (Retiro Espiritual).
 
 ## 🎯 Épico 5: Interface de Controle (API REST em Go)
 - [ ] **Servidor HTTP Extremamente Leve:**
