@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 
@@ -26,10 +27,32 @@ func NewLetraRepository(db *mongo.Database) *LetraRepository {
 	}
 }
 
-// BuscarMusicaPendente busca uma música PENDENTE na fila e altera atômicamente seu status para PROCESSANDO.
-// Garante ausência de Race Conditions pelo uso de FindOneAndUpdate.
-func (r *LetraRepository) BuscarMusicaPendente(ctx context.Context) (*model.Letra, error) {
+// BuscarUsuariosComPendencias retorna uma lista de IDs únicos de usuários que possuem letras pendentes
+func (r *LetraRepository) BuscarUsuariosComPendencias(ctx context.Context) ([]primitive.ObjectID, error) {
 	filter := bson.M{"status": model.StatusPendente}
+	
+	resultados, err := r.collection.Distinct(ctx, "id_usuario", filter)
+	if err != nil {
+		return nil, err
+	}
+
+	var usuarios []primitive.ObjectID
+	for _, res := range resultados {
+		if id, ok := res.(primitive.ObjectID); ok {
+			usuarios = append(usuarios, id)
+		}
+	}
+	
+	return usuarios, nil
+}
+
+// BuscarMusicaPendentePorUsuario busca a música PENDENTE mais antiga de um usuário e altera atômicamente seu status para PROCESSANDO.
+// Garante ausência de Race Conditions pelo uso de FindOneAndUpdate.
+func (r *LetraRepository) BuscarMusicaPendentePorUsuario(ctx context.Context, idUsuario primitive.ObjectID) (*model.Letra, error) {
+	filter := bson.M{
+		"status":     model.StatusPendente,
+		"id_usuario": idUsuario,
+	}
 	
 	update := bson.M{
 		"$set": bson.M{

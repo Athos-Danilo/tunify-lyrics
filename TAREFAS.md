@@ -33,10 +33,10 @@ Para garantir a máxima performance com o menor consumo de infraestrutura possí
   - Configurar logs no padrão JSON para fácil rastreabilidade no terminal e integração com plataformas de observabilidade, usando a biblioteca nativa `slog` (Go 1.21+) ou `zap`.
 
 ## 🎯 Épico 2: Repositório e Gestão de Estado
-- [ ] **Modelagem de Dados:**
+- [x] **Modelagem de Dados:**
   - Criar o *Struct* Go (`model.Letra`) espelhando com perfeição a coleção de Letras do MongoDB usando as tags `bson`.
   - **Atenção:** Atualizar o *Struct* para garantir o mapeamento do campo `id_usuario` no futuro, para habilitar as restrições de limites mensais.
-- [ ] **Operações Atômicas de Banco:**
+- [x] **Operações Atômicas de Banco:**
   - Criar método `BuscarMusicaPendente()`.
   - **Mecanismo de Lock Profissional:** Usar o comando `FindOneAndUpdate` do MongoDB para buscar um item com status `PENDENTE` e alterá-lo instantaneamente para `PROCESSANDO` em uma única operação atômica, eliminando totalmente o risco de *Race Conditions* (goroutines ou contêineres diferentes processando a mesma música ao mesmo tempo).
   - Criar método `AtualizarStatusMusica()` para salvar os resultados como `CONCLUIDO` (com ou sem sincronia) ou `NAO_ENCONTRADA`.
