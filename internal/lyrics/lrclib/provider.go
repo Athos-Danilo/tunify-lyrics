@@ -55,8 +55,8 @@ func (p *Provider) Fetch(ctx context.Context, artista, titulo string) (*lyrics.R
 		return nil, fmt.Errorf("erro ao criar requisição LRCLIB: %w", err)
 	}
 	
-	// Adicionando um User-Agent por boas práticas e para evitar bloqueios bobos
-	req.Header.Set("User-Agent", "Tunify-Lyrics-Worker/1.0 (github.com/athosdanilo/tunify-letras)")
+	// Muitos sites de API bloqueiam o Go padrão. Injetamos um User-Agent.
+	req.Header.Set("User-Agent", "TunifyLyricsBot/1.0 (https://github.com/Athos-Danilo)")
 
 	resp, err := p.client.Do(req)
 	if err != nil {

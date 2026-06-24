@@ -46,11 +46,10 @@ func (p *Provider) Fetch(ctx context.Context, artista, titulo string) (*lyrics.R
 
 	// User-Agent simulando um navegador real é crucial para scrapers
 	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
-	req.Header.Set("Accept-Language", "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7")
 
 	resp, err := p.client.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("erro ao acessar Letras.mus.br: %w", err)
+		return nil, fmt.Errorf("erro HTTP ao acessar %s: %w", reqURL, err)
 	}
 	defer resp.Body.Close()
 
