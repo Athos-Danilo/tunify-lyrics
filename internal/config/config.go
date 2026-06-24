@@ -10,10 +10,12 @@ import (
 
 // AppConfig armazena as configurações essenciais do sistema
 type AppConfig struct {
-	MongoURI     string
-	DatabaseName string
-	CronInterval string
-	Port         string
+	MongoURI         string
+	DatabaseName     string
+	CronInterval     string
+	Port             string
+	MaxDailyQuota    int
+	MaxPerUserQuota  int
 }
 
 // Config contém a instância global de configuração
@@ -36,7 +38,7 @@ func Load() error {
 
 	cronInterval := os.Getenv("CRON_INTERVAL")
 	if cronInterval == "" {
-		cronInterval = "@every 1m" // Padrão: rodar a cada 1 minuto
+		cronInterval = "@every 15m" // Padrão: rodar a cada 15 minutos (Worker calmo)
 	}
 
 	port := os.Getenv("PORT")
@@ -44,11 +46,25 @@ func Load() error {
 		port = "8080"
 	}
 
+	maxDailyQuotaStr := os.Getenv("MAX_DAILY_QUOTA")
+	maxDailyQuota := 100
+	if maxDailyQuotaStr != "" {
+		fmt.Sscanf(maxDailyQuotaStr, "%d", &maxDailyQuota)
+	}
+
+	maxPerUserQuotaStr := os.Getenv("MAX_PER_USER_QUOTA")
+	maxPerUserQuota := 20
+	if maxPerUserQuotaStr != "" {
+		fmt.Sscanf(maxPerUserQuotaStr, "%d", &maxPerUserQuota)
+	}
+
 	Config = AppConfig{
-		MongoURI:     mongoURI,
-		DatabaseName: databaseName,
-		CronInterval: cronInterval,
-		Port:         port,
+		MongoURI:         mongoURI,
+		DatabaseName:     databaseName,
+		CronInterval:     cronInterval,
+		Port:             port,
+		MaxDailyQuota:    maxDailyQuota,
+		MaxPerUserQuota:  maxPerUserQuota,
 	}
 
 	return nil
