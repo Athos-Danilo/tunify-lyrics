@@ -41,18 +41,18 @@ Para garantir a máxima performance com o menor consumo de infraestrutura possí
   - Criar método `AtualizarStatusMusica()` para salvar os resultados como `CONCLUIDO` (com ou sem sincronia) ou `NAO_ENCONTRADA`.
 
 ## 🎯 Épico 3: Motores de Busca e Scraping Inteligente
-- [ ] **Implementar Padrão Strategy:**
+- [x] **Implementar Padrão Strategy:**
   - Criar a interface `LyricsProvider` com o contrato `Fetch(artista string, titulo string) (*Result, error)`.
-- [ ] **Provedor Nível Ouro (API LRCLIB):**
+- [x] **Provedor Nível Ouro (API LRCLIB):**
   - Integrar com os endpoints públicos da LRCLIB.
   - Lógica para processar JSON, validar existência de tempo (tags de sincronia ex: `[00:15.30]`) e extrair.
   - Definir a flag `sincronizada: true` no retorno.
-- [ ] **Provedor Nível Prata (Letras.mus.br Scraping):**
+- [x] **Provedor Nível Prata (Letras.mus.br Scraping):**
   - Utilizar a biblioteca `goquery`.
   - Desenvolver uma função inteligente de normalização de strings (Regex) para converter nomes ("Coldplay", "Yellow") no formato correto das URLs do site.
   - Realizar o Scraping da Div contendo a letra e remover anúncios ou quebras de linhas desnecessárias.
   - Definir a flag `sincronizada: false` no retorno.
-- [ ] **Orquestrador em Cascata (Fallback Manager):**
+- [x] **Orquestrador em Cascata (Fallback Manager):**
   - Lógica de fluxo: Tenta `Ouro` -> Se falhar ou estiver indisponível -> Tenta `Prata` -> Se falhar -> Exaure as tentativas e encerra como `NAO_ENCONTRADA`.
 
 ## 🎯 Épico 4: Motor de Processamento Assíncrono (Worker)
