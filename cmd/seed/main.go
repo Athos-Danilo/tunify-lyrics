@@ -10,7 +10,6 @@ import (
 	"github.com/athosdanilo/tunify-letras/internal/db"
 	"github.com/athosdanilo/tunify-letras/internal/logger"
 	"github.com/athosdanilo/tunify-letras/internal/model"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 func main() {
@@ -28,24 +27,20 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	// Inserir 2 musicas pendentes de um usuário de teste
-	idUsuario := primitive.NewObjectID()
+	// Inserir 3 musicas pendentes de teste
 
 	musicas := []interface{}{
 		model.Letra{
-			IDUsuario: idUsuario,
 			Artista:   "Coldplay",
 			Titulo:    "Yellow",
 			Status:    model.StatusPendente,
 		},
 		model.Letra{
-			IDUsuario: idUsuario,
 			Artista:   "Henrique e Juliano",
 			Titulo:    "Cuida Bem Dela",
 			Status:    model.StatusPendente,
 		},
 		model.Letra{
-			IDUsuario: idUsuario,
 			Artista:   "UmaBandaFalsa123",
 			Titulo:    "MusicaQueNaoExiste",
 			Status:    model.StatusPendente,

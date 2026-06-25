@@ -37,7 +37,7 @@ func Load() error {
 
 	cronInterval := os.Getenv("CRON_INTERVAL")
 	if cronInterval == "" {
-		cronInterval = "@every 15m" // Padrão: rodar a cada 15 minutos (Worker calmo)
+		cronInterval = "*/15 * * * *" // Padrão: rodar a cada 15 minutos alinhado ao relógio (ex: 05:00, 05:15...)
 	}
 
 	port := os.Getenv("PORT")

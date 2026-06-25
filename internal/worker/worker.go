@@ -20,8 +20,9 @@ type LyricsWorker struct {
 	letraRepo       *repository.LetraRepository
 	cotaRepo        *repository.CotaRepository
 	fallbackManager *lyrics.FallbackManager
-	logger          *slog.Logger
-	isRunning       bool
+	logger           *slog.Logger
+	isRunning        bool
+	cotaAtingidaData string
 }
 
 // NewLyricsWorker inicializa o Worker com o agendador Cron
@@ -73,6 +74,11 @@ func (w *LyricsWorker) processarFila() {
 	defer cancel()
 
 	dataHoje := time.Now().Format("2006-01-02")
+	if w.cotaAtingidaData == dataHoje {
+		w.logger.Info("Cota diária já atingida hoje. Dormindo até amanhã...")
+		return
+	}
+
 	cotaDiaria, err := w.cotaRepo.ObterCotaDoDia(ctx, dataHoje)
 	if err != nil {
 		w.logger.Error("Erro ao verificar cota diária", "erro", err)
@@ -80,6 +86,7 @@ func (w *LyricsWorker) processarFila() {
 	}
 
 	if cotaDiaria.ContagemGlobal >= config.Config.MaxDailyQuota {
+		w.cotaAtingidaData = dataHoje
 		w.logger.Warn("Cota diária global atingida. Entrando em retiro espiritual.", "cota", cotaDiaria.ContagemGlobal, "max", config.Config.MaxDailyQuota)
 		return
 	}
@@ -143,6 +150,7 @@ func (w *LyricsWorker) processarFila() {
 		// Atualiza a memória local da cota global para saber se deve parar no meio do lote
 		cotaDiaria.ContagemGlobal++
 		if cotaDiaria.ContagemGlobal >= config.Config.MaxDailyQuota {
+			w.cotaAtingidaData = dataHoje
 			w.logger.Warn("Cota diária global atingida durante o lote. Abortando restante.")
 			return
 		}
