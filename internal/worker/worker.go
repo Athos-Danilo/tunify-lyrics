@@ -77,13 +77,13 @@ func (w *LyricsWorker) processarFila() {
 	w.isRunning = true
 	defer func() { w.isRunning = false }()
 
-	w.logger.Info("Iniciando ciclo de processamento da fila")
+	w.logger.Info("🔄 Iniciando ciclo de processamento da fila")
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
 	defer cancel()
 
 	dataHoje := time.Now().Format("2006-01-02")
 	if w.cotaAtingidaData == dataHoje {
-		w.logger.Info("Cota diária já atingida hoje. Dormindo até amanhã...")
+		w.logger.Info("💤 Cota diária já atingida hoje. Dormindo até amanhã...")
 		return
 	}
 
@@ -95,7 +95,7 @@ func (w *LyricsWorker) processarFila() {
 
 	if cotaDiaria.ContagemGlobal >= config.Config.MaxDailyQuota {
 		w.cotaAtingidaData = dataHoje
-		w.logger.Warn("Cota diária global atingida. Entrando em retiro espiritual.", "cota", cotaDiaria.ContagemGlobal, "max", config.Config.MaxDailyQuota)
+		w.logger.Warn("🛑 Cota diária global atingida. Entrando em retiro espiritual.", "cota", cotaDiaria.ContagemGlobal, "max", config.Config.MaxDailyQuota)
 		return
 	}
 
@@ -107,9 +107,9 @@ func (w *LyricsWorker) processarFila() {
 		if err != nil {
 			if errors.Is(err, repository.ErrNoPendingLyrics) {
 				if i == 0 {
-					w.logger.Info("Fila vazia. Nada a processar.")
+					w.logger.Info("💤 Fila vazia. Nada a processar.")
 				} else {
-					w.logger.Info("Não há mais músicas pendentes na fila.")
+					w.logger.Info("💤 Não há mais músicas pendentes na fila.")
 				}
 				break
 			}
@@ -117,7 +117,7 @@ func (w *LyricsWorker) processarFila() {
 			continue
 		}
 
-		w.logger.Info("Processando música", "titulo", letra.Titulo, "artista", letra.Artista)
+		w.logger.Info("🎵 Processando música", "titulo", letra.Titulo, "artista", letra.Artista)
 
 		status := model.StatusConcluido
 		conteudo := ""
@@ -134,10 +134,10 @@ func (w *LyricsWorker) processarFila() {
 			if err != nil {
 				if errors.Is(err, lyrics.ErrNaoEncontrada) {
 					status = model.StatusNaoEncontrada
-					w.logger.Info("Letra não encontrada em nenhum provedor")
+					w.logger.Info("❌ Letra não encontrada em nenhum provedor")
 				} else {
 					// Retiro Espiritual de emergência: se tomamos 429 ou timeouts graves de infra, abortamos o lote todo.
-					w.logger.Error("Erro de comunicação com o provedor. Abortando lote.", "erro", err)
+					w.logger.Error("🚨 Erro de comunicação com o provedor. Abortando lote.", "erro", err)
 					
 					// Reverte o status para PENDENTE (fallback de segurança) para processar na próxima
 					_ = w.letraRepo.AtualizarStatusMusica(ctx, letra.ID, model.StatusPendente, "", false, "", letra.TentativasProcessamento)
@@ -171,7 +171,7 @@ func (w *LyricsWorker) processarFila() {
 		}
 
 		// JITTER / PAUSA HUMANA: Espera 5 segundos antes de avançar pra próxima música
-		w.logger.Debug("Aplicando Jitter de 5s...")
+		w.logger.Debug("⏳ Aplicando Jitter de 5s...")
 		time.Sleep(5 * time.Second)
 	}
 }
@@ -179,13 +179,13 @@ func (w *LyricsWorker) processarFila() {
 // processarUpgrade tenta atualizar letras que não possuem sincronia utilizando uma cota paralela de 50 requests
 func (w *LyricsWorker) processarUpgrade() {
 	if w.isRunning {
-		w.logger.Warn("Worker noturno pulou este ciclo porque outro processamento está em execução")
+		w.logger.Warn("⚠️ Worker noturno pulou este ciclo porque outro processamento está em execução")
 		return
 	}
 	w.isRunning = true
 	defer func() { w.isRunning = false }()
 
-	w.logger.Info("Iniciando rotina noturna de upgrade de letras")
+	w.logger.Info("🌙 Iniciando rotina noturna de upgrade de letras")
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
 	defer cancel()
 
@@ -208,14 +208,14 @@ func (w *LyricsWorker) processarUpgrade() {
 		letra, err := w.letraRepo.BuscarMusicaParaUpgrade(ctx)
 		if err != nil {
 			if errors.Is(err, repository.ErrNoPendingLyrics) {
-				w.logger.Info("Rotina noturna não encontrou mais nenhuma letra para dar upgrade. Finalizando ciclo.")
+				w.logger.Info("💤 Rotina noturna não encontrou mais nenhuma letra para dar upgrade. Finalizando ciclo.")
 				break
 			}
-			w.logger.Error("Erro ao buscar música para upgrade", "erro", err)
+			w.logger.Error("🚨 Erro ao buscar música para upgrade", "erro", err)
 			continue
 		}
 
-		w.logger.Info("Tentando upgrade de música", "titulo", letra.Titulo, "artista", letra.Artista, "tentativa_atual", letra.TentativasProcessamento)
+		w.logger.Info("✨ Tentando upgrade de música", "titulo", letra.Titulo, "artista", letra.Artista, "tentativa_atual", letra.TentativasProcessamento)
 
 		// Busca forçada na API do fallbackManager
 		res, err := w.fallbackManager.FetchLyrics(ctx, letra.Artista, letra.Titulo)
@@ -227,25 +227,25 @@ func (w *LyricsWorker) processarUpgrade() {
 			// Se der erro ou se achar de novo uma não sincronizada, a gente só incrementa as tentativas
 			// e mantém os dados velhos, exceto que o AtualizarStatusMusica requer os dados, 
 			// então passamos os que ele já tinha antes (que estavam na struct)
-			w.logger.Info("Upgrade falhou, letra continua sem sincronia.", "titulo", letra.Titulo)
+			w.logger.Info("❌ Upgrade falhou, letra continua sem sincronia.", "titulo", letra.Titulo)
 			err = w.letraRepo.AtualizarStatusMusica(ctx, letra.ID, status, letra.Conteudo, letra.Sincronizada, letra.Fonte, novaTentativa)
 		} else {
 			// Sucesso no upgrade
-			w.logger.Info("Upgrade realizado com sucesso! Letra sincronizada encontrada.", "titulo", letra.Titulo)
+			w.logger.Info("✅ Upgrade realizado com sucesso! Letra sincronizada encontrada.", "titulo", letra.Titulo)
 			err = w.letraRepo.AtualizarStatusMusica(ctx, letra.ID, status, res.Letra, res.Sincronizada, res.Fonte, novaTentativa)
 		}
 
 		if err != nil {
-			w.logger.Error("Erro ao salvar upgrade da música", "erro", err)
+			w.logger.Error("🚨 Erro ao salvar upgrade da música", "erro", err)
 		}
 
 		err = w.cotaRepo.IncrementarCotaNoturna(ctx, dataHoje)
 		if err != nil {
-			w.logger.Error("Erro ao incrementar cota noturna", "erro", err)
+			w.logger.Error("🚨 Erro ao incrementar cota noturna", "erro", err)
 		}
 
-		w.logger.Debug("Aplicando Jitter noturno de 5s...")
+		w.logger.Debug("⏳ Aplicando Jitter noturno de 5s...")
 		time.Sleep(5 * time.Second)
 	}
-	w.logger.Info("Rotina noturna de upgrade finalizada com sucesso.")
+	w.logger.Info("🏁 Rotina noturna de upgrade finalizada com sucesso.")
 }
