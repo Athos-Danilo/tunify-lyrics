@@ -44,8 +44,15 @@ func (w *LyricsWorker) Start() error {
 	if err != nil {
 		return err
 	}
+	
+	_, err = w.cron.AddFunc("0 22 * * *", w.processarUpgrade)
+	if err != nil {
+		return err
+	}
+
 	w.cron.Start()
 	w.logger.Info("Worker iniciado com sucesso", "intervalo", config.Config.CronInterval)
+	w.logger.Info("Rotina noturna agendada para as 22h00")
 	return nil
 }
 
@@ -133,7 +140,7 @@ func (w *LyricsWorker) processarFila() {
 					w.logger.Error("Erro de comunicação com o provedor. Abortando lote.", "erro", err)
 					
 					// Reverte o status para PENDENTE (fallback de segurança) para processar na próxima
-					_ = w.letraRepo.AtualizarStatusMusica(ctx, letra.ID, model.StatusPendente, "", false, "")
+					_ = w.letraRepo.AtualizarStatusMusica(ctx, letra.ID, model.StatusPendente, "", false, "", letra.TentativasProcessamento)
 					return 
 				}
 			} else {
@@ -143,8 +150,8 @@ func (w *LyricsWorker) processarFila() {
 			}
 		}
 
-		// Salvar o resultado
-		err = w.letraRepo.AtualizarStatusMusica(ctx, letra.ID, status, conteudo, sincronizada, fonte)
+		// Salvar o resultado (incrementa tentativa de processamento ao terminar um ciclo do funil)
+		err = w.letraRepo.AtualizarStatusMusica(ctx, letra.ID, status, conteudo, sincronizada, fonte, letra.TentativasProcessamento+1)
 		if err != nil {
 			w.logger.Error("Erro ao salvar resultado da música", "erro", err)
 		}
@@ -167,4 +174,78 @@ func (w *LyricsWorker) processarFila() {
 		w.logger.Debug("Aplicando Jitter de 5s...")
 		time.Sleep(5 * time.Second)
 	}
+}
+
+// processarUpgrade tenta atualizar letras que não possuem sincronia utilizando uma cota paralela de 50 requests
+func (w *LyricsWorker) processarUpgrade() {
+	if w.isRunning {
+		w.logger.Warn("Worker noturno pulou este ciclo porque outro processamento está em execução")
+		return
+	}
+	w.isRunning = true
+	defer func() { w.isRunning = false }()
+
+	w.logger.Info("Iniciando rotina noturna de upgrade de letras")
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
+	defer cancel()
+
+	dataHoje := time.Now().Format("2006-01-02")
+	cotaDiaria, err := w.cotaRepo.ObterCotaDoDia(ctx, dataHoje)
+	if err != nil {
+		w.logger.Error("Erro ao verificar cota para upgrade", "erro", err)
+		return
+	}
+
+	if cotaDiaria.ContagemNoturna >= 50 {
+		w.logger.Info("Cota noturna (50 buscas) já foi atingida hoje. Dormindo...")
+		return
+	}
+
+	limiteNoturno := 50 - cotaDiaria.ContagemNoturna
+	
+	// Executar em um único lote noturno
+	for i := 0; i < limiteNoturno; i++ {
+		letra, err := w.letraRepo.BuscarMusicaParaUpgrade(ctx)
+		if err != nil {
+			if errors.Is(err, repository.ErrNoPendingLyrics) {
+				w.logger.Info("Rotina noturna não encontrou mais nenhuma letra para dar upgrade. Finalizando ciclo.")
+				break
+			}
+			w.logger.Error("Erro ao buscar música para upgrade", "erro", err)
+			continue
+		}
+
+		w.logger.Info("Tentando upgrade de música", "titulo", letra.Titulo, "artista", letra.Artista, "tentativa_atual", letra.TentativasProcessamento)
+
+		// Busca forçada na API do fallbackManager
+		res, err := w.fallbackManager.FetchLyrics(ctx, letra.Artista, letra.Titulo)
+		
+		status := model.StatusConcluido
+		novaTentativa := letra.TentativasProcessamento + 1
+
+		if err != nil || (res != nil && !res.Sincronizada) {
+			// Se der erro ou se achar de novo uma não sincronizada, a gente só incrementa as tentativas
+			// e mantém os dados velhos, exceto que o AtualizarStatusMusica requer os dados, 
+			// então passamos os que ele já tinha antes (que estavam na struct)
+			w.logger.Info("Upgrade falhou, letra continua sem sincronia.", "titulo", letra.Titulo)
+			err = w.letraRepo.AtualizarStatusMusica(ctx, letra.ID, status, letra.Conteudo, letra.Sincronizada, letra.Fonte, novaTentativa)
+		} else {
+			// Sucesso no upgrade
+			w.logger.Info("Upgrade realizado com sucesso! Letra sincronizada encontrada.", "titulo", letra.Titulo)
+			err = w.letraRepo.AtualizarStatusMusica(ctx, letra.ID, status, res.Letra, res.Sincronizada, res.Fonte, novaTentativa)
+		}
+
+		if err != nil {
+			w.logger.Error("Erro ao salvar upgrade da música", "erro", err)
+		}
+
+		err = w.cotaRepo.IncrementarCotaNoturna(ctx, dataHoje)
+		if err != nil {
+			w.logger.Error("Erro ao incrementar cota noturna", "erro", err)
+		}
+
+		w.logger.Debug("Aplicando Jitter noturno de 5s...")
+		time.Sleep(5 * time.Second)
+	}
+	w.logger.Info("Rotina noturna de upgrade finalizada com sucesso.")
 }

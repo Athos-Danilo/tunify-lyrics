@@ -58,15 +58,47 @@ func (r *LetraRepository) BuscarMusicaPendente(ctx context.Context) (*model.Letr
 	return &letra, nil
 }
 
+// BuscarMusicaParaUpgrade busca uma música CONCLUIDA mas não sincronizada, com tentativas < 3
+func (r *LetraRepository) BuscarMusicaParaUpgrade(ctx context.Context) (*model.Letra, error) {
+	filter := bson.M{
+		"status":                   model.StatusConcluido,
+		"sincronizada":             false,
+		"tentativas_processamento": bson.M{"$lt": 3},
+	}
+	
+	update := bson.M{
+		"$set": bson.M{
+			"status":        model.StatusProcessando,
+			"atualizado_em": time.Now(),
+		},
+	}
+
+	opts := options.FindOneAndUpdate().
+		SetSort(bson.D{{Key: "atualizado_em", Value: 1}}).
+		SetReturnDocument(options.After)
+
+	var letra model.Letra
+	err := r.collection.FindOneAndUpdate(ctx, filter, update, opts).Decode(&letra)
+	if err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return nil, ErrNoPendingLyrics
+		}
+		return nil, err
+	}
+
+	return &letra, nil
+}
+
 // AtualizarStatusMusica atualiza a letra após processamento (encontrada ou não).
-func (r *LetraRepository) AtualizarStatusMusica(ctx context.Context, id interface{}, status model.StatusLetra, conteudo string, sincronizada bool, fonte string) error {
+func (r *LetraRepository) AtualizarStatusMusica(ctx context.Context, id interface{}, status model.StatusLetra, conteudo string, sincronizada bool, fonte string, tentativas int) error {
 	filter := bson.M{"_id": id}
 	
 	setFields := bson.M{
-		"status":        status,
-		"texto_letra":   conteudo,
-		"sincronizada":  sincronizada,
-		"atualizado_em": time.Now(),
+		"status":                   status,
+		"texto_letra":              conteudo,
+		"sincronizada":             sincronizada,
+		"tentativas_processamento": tentativas,
+		"atualizado_em":            time.Now(),
 	}
 	
 	if fonte != "" {

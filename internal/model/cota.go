@@ -9,4 +9,5 @@ type CotaDiaria struct {
 	ID                 primitive.ObjectID            `bson:"_id,omitempty" json:"id,omitempty"`
 	Data               string                        `bson:"data" json:"data"` // Ex: "2026-06-24"
 	ContagemGlobal     int                           `bson:"contagem_global" json:"contagem_global"`
+	ContagemNoturna    int                           `bson:"contagem_noturna" json:"contagem_noturna"`
 }

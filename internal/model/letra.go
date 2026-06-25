@@ -24,7 +24,8 @@ type Letra struct {
 	Conteudo     string             `bson:"texto_letra,omitempty" json:"texto_letra,omitempty"`
 	Sincronizada bool               `bson:"sincronizada" json:"sincronizada"`
 	Fonte        string             `bson:"fonte_letra" json:"fonte_letra"`
-	Status       StatusLetra        `bson:"status" json:"status"`
-	CriadoEm     time.Time          `bson:"criado_em" json:"criado_em"`
-	AtualizadoEm time.Time          `bson:"atualizado_em" json:"atualizado_em"`
+	Status                    StatusLetra        `bson:"status" json:"status"`
+	TentativasProcessamento   int                `bson:"tentativas_processamento" json:"tentativas_processamento"`
+	CriadoEm                  time.Time          `bson:"criado_em" json:"criado_em"`
+	AtualizadoEm              time.Time          `bson:"atualizado_em" json:"atualizado_em"`
 }

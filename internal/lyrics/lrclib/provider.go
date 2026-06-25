@@ -20,7 +20,7 @@ type Provider struct {
 func NewProvider() *Provider {
 	return &Provider{
 		client: &http.Client{
-			Timeout: 10 * time.Second, // Timeout adequado para não travar
+			Timeout: 30 * time.Second, // Aumentado para lidar com instabilidades
 		},
 	}
 }

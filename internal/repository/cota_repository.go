@@ -32,6 +32,7 @@ func (r *CotaRepository) ObterCotaDoDia(ctx context.Context, data string) (*mode
 		"$setOnInsert": bson.M{
 			"data": data,
 			"contagem_global": 0,
+			"contagem_noturna": 0,
 		},
 	}
 	
@@ -55,6 +56,20 @@ func (r *CotaRepository) IncrementarCota(ctx context.Context, data string) error
 	update := bson.M{
 		"$inc": bson.M{
 			"contagem_global": 1,
+		},
+	}
+
+	_, err := r.collection.UpdateOne(ctx, filter, update)
+	return err
+}
+
+// IncrementarCotaNoturna incrementa a cota noturna de forma atômica.
+func (r *CotaRepository) IncrementarCotaNoturna(ctx context.Context, data string) error {
+	filter := bson.M{"data": data}
+
+	update := bson.M{
+		"$inc": bson.M{
+			"contagem_noturna": 1,
 		},
 	}
 
