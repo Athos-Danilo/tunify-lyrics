@@ -19,9 +19,9 @@ const (
 // Letra espelha a coleção de Letras no MongoDB
 type Letra struct {
 	ID           primitive.ObjectID `bson:"_id,omitempty" json:"id,omitempty"`
-	Artista      string             `bson:"artista" json:"artista"`
-	Titulo       string             `bson:"titulo" json:"titulo"`
-	Conteudo     string             `bson:"conteudo,omitempty" json:"conteudo,omitempty"`
+	Artista      string             `bson:"nome_artista" json:"nome_artista"`
+	Titulo       string             `bson:"nome_musica" json:"nome_musica"`
+	Conteudo     string             `bson:"texto_letra,omitempty" json:"texto_letra,omitempty"`
 	Sincronizada bool               `bson:"sincronizada" json:"sincronizada"`
 	Status       StatusLetra        `bson:"status" json:"status"`
 	CriadoEm     time.Time          `bson:"criado_em" json:"criado_em"`

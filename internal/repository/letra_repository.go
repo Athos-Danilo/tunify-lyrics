@@ -64,7 +64,7 @@ func (r *LetraRepository) AtualizarStatusMusica(ctx context.Context, id interfac
 	update := bson.M{
 		"$set": bson.M{
 			"status":        status,
-			"conteudo":      conteudo,
+			"texto_letra":   conteudo,
 			"sincronizada":  sincronizada,
 			"atualizado_em": time.Now(),
 		},
