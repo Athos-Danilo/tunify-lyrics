@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"strings"
 	"time"
 
 	"github.com/robfig/cron/v3"
@@ -111,28 +112,33 @@ func (w *LyricsWorker) processarFila() {
 
 		w.logger.Info("Processando música", "titulo", letra.Titulo, "artista", letra.Artista)
 
-		// Buscar letra nos provedores
-		res, err := w.fallbackManager.FetchLyrics(ctx, letra.Artista, letra.Titulo)
-		
 		status := model.StatusConcluido
 		conteudo := ""
 		sincronizada := false
 
-		if err != nil {
-			if errors.Is(err, lyrics.ErrNaoEncontrada) {
-				status = model.StatusNaoEncontrada
-				w.logger.Info("Letra não encontrada em nenhum provedor")
-			} else {
-				// Retiro Espiritual de emergência: se tomamos 429 ou timeouts graves de infra, abortamos o lote todo.
-				w.logger.Error("Erro de comunicação com o provedor. Abortando lote.", "erro", err)
-				
-				// Reverte o status para PENDENTE (fallback de segurança) para processar na próxima
-				_ = w.letraRepo.AtualizarStatusMusica(ctx, letra.ID, model.StatusPendente, "", false)
-				return 
-			}
+		if strings.TrimSpace(letra.Titulo) == "" || strings.TrimSpace(letra.Artista) == "" {
+			w.logger.Warn("Título ou artista vazios, ignorando busca", "titulo", letra.Titulo, "artista", letra.Artista)
+			status = model.StatusNaoEncontrada
 		} else {
-			conteudo = res.Letra
-			sincronizada = res.Sincronizada
+			// Buscar letra nos provedores
+			res, err := w.fallbackManager.FetchLyrics(ctx, letra.Artista, letra.Titulo)
+			
+			if err != nil {
+				if errors.Is(err, lyrics.ErrNaoEncontrada) {
+					status = model.StatusNaoEncontrada
+					w.logger.Info("Letra não encontrada em nenhum provedor")
+				} else {
+					// Retiro Espiritual de emergência: se tomamos 429 ou timeouts graves de infra, abortamos o lote todo.
+					w.logger.Error("Erro de comunicação com o provedor. Abortando lote.", "erro", err)
+					
+					// Reverte o status para PENDENTE (fallback de segurança) para processar na próxima
+					_ = w.letraRepo.AtualizarStatusMusica(ctx, letra.ID, model.StatusPendente, "", false)
+					return 
+				}
+			} else {
+				conteudo = res.Letra
+				sincronizada = res.Sincronizada
+			}
 		}
 
 		// Salvar o resultado
