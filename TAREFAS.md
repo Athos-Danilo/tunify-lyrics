@@ -35,7 +35,6 @@ Para garantir a máxima performance com o menor consumo de infraestrutura possí
 ## 🎯 Épico 2: Repositório e Gestão de Estado
 - [x] **Modelagem de Dados:**
   - Criar o *Struct* Go (`model.Letra`) espelhando com perfeição a coleção de Letras do MongoDB usando as tags `bson`.
-  - **Atenção:** Atualizar o *Struct* para garantir o mapeamento do campo `id_usuario` no futuro, para habilitar as restrições de limites mensais.
 - [x] **Operações Atômicas de Banco:**
   - Criar método `BuscarMusicaPendente()`.
   - **Mecanismo de Lock Profissional:** Usar o comando `FindOneAndUpdate` do MongoDB para buscar um item com status `PENDENTE` e alterá-lo instantaneamente para `PROCESSANDO` em uma única operação atômica, eliminando totalmente o risco de *Race Conditions* (goroutines ou contêineres diferentes processando a mesma música ao mesmo tempo).
@@ -61,8 +60,8 @@ Para garantir a máxima performance com o menor consumo de infraestrutura possí
   - Integrar pacote (como `robfig/cron/v3`) ou usar um Ticker nativo (`time.Ticker`).
   - Configurar para despertar de forma leve a cada 15 a 30 minutos, poupando a nuvem (Free Tier).
 - [x] **Gerenciamento de Fila com Cota e Fila Justa (*Fair Queuing*):**
-  - Controlar as cotas usando variáveis de ambiente (ex: 100 globais diárias, limite de 20 por usuário diárias).
-  - Desenvolver uma `aggregation pipeline` ou lógica no MongoDB para puxar as tarefas em padrão *Round Robin* por `id_usuario` (2 letras de um, 2 do outro) não deixando um "super usuário" dominar o ciclo do cron.
+  - Controlar as cotas usando variáveis de ambiente (ex: 100 globais diárias).
+  - Desenvolver uma lógica no MongoDB para puxar as tarefas pendentes na fila em lotes sequenciais de forma eficiente.
 - [x] **Proteção de IP e Profilaxia (Jitter/Sleep):**
   - Inserir um `time.Sleep` de cerca de 5 segundos entre cada requisição processada dentro de um lote. Isso previne tomar blocos HTTP `429` ou de WAF (Cloudflare) provenientes do site de letras por "acesso rápido demais".
   - Se tomar `429 Too Many Requests`, acionar o *Exponential Backoff* ou suspender a fila totalmente por horas (Retiro Espiritual).

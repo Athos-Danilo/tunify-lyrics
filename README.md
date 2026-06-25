@@ -41,7 +41,7 @@ Como este sistema será hospedado em infraestruturas *Free Tier* de nuvem, possu
 * **Operação Constante e Lenta:** O robô não varre as pendências de uma vez. O *Cron* o desperta a cada 15 a 30 minutos para processar *micro-lotes* (ex: 2 a 3 letras por vez).
 * **Pausas Humanizadas (Jitter):** Para mascarar o *scraping*, a aplicação insere *Sleeps* (pausas) fixos de cerca de 5 segundos entre as requisições de um lote, imitando perfeitamente a navegação de um ser humano.
 * **Cota Diária Limitada:** O serviço é travado para processar um teto máximo de 100 músicas por dia (24h).
-* **Distribuição Justa (*Fair Queuing*):** Para evitar que um "super usuário" domine toda a fila ao sincronizar milhares de músicas e deixe os demais na espera, a cota de 100 letras diárias é dividida igualmente. Na nossa versão beta, a integração do Spotify é restrita a 5 usuários simultâneos, resultando na limitação estrita de busca de **até 20 músicas diárias por usuário**. Se sobrar cota de usuários inativos, o sistema fará um balanceamento redistribuindo para os mais necessitados (Round Robin).
+* **Fila Global Simples:** A cota global diária é processada a partir de um pool geral de músicas pendentes, de forma agnóstica a usuários, reduzindo a complexidade de rastreamento e distribuição.
 
 ---
 
@@ -86,7 +86,6 @@ A coleção `Letras` foi padronizada para garantir clareza semântica:
 {
   "_id": "ObjectId('...')",
   "id_musica_spotify": "3yfqSUWxFvZELEM4PmlwIR",
-  "id_usuario": "ObjectId('...')",
   "nome_musica": "Yellow",
   "nome_artista": "Coldplay",
   "status": "PENDENTE",
@@ -126,7 +125,6 @@ Crie um arquivo `.env` na raiz do projeto contendo as credenciais de acesso:
 MONGO_URI=mongodb+srv://<usuario>:<senha>@cluster.mongodb.net/?retryWrites=true&w=majority
 DATABASE_NAME=tunify
 MAX_DAILY_QUOTA=100
-MAX_PER_USER_QUOTA=20
 ```
 
 ### 3. Executar o Serviço

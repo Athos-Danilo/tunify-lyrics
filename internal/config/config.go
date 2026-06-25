@@ -15,7 +15,6 @@ type AppConfig struct {
 	CronInterval     string
 	Port             string
 	MaxDailyQuota    int
-	MaxPerUserQuota  int
 }
 
 // Config contém a instância global de configuração
@@ -52,19 +51,12 @@ func Load() error {
 		fmt.Sscanf(maxDailyQuotaStr, "%d", &maxDailyQuota)
 	}
 
-	maxPerUserQuotaStr := os.Getenv("MAX_PER_USER_QUOTA")
-	maxPerUserQuota := 20
-	if maxPerUserQuotaStr != "" {
-		fmt.Sscanf(maxPerUserQuotaStr, "%d", &maxPerUserQuota)
-	}
-
 	Config = AppConfig{
 		MongoURI:         mongoURI,
 		DatabaseName:     databaseName,
 		CronInterval:     cronInterval,
 		Port:             port,
 		MaxDailyQuota:    maxDailyQuota,
-		MaxPerUserQuota:  maxPerUserQuota,
 	}
 
 	return nil

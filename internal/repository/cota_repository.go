@@ -33,7 +33,6 @@ func (r *CotaRepository) ObterCotaDoDia(ctx context.Context, data string) (*mode
 		"$setOnInsert": bson.M{
 			"data": data,
 			"contagem_global": 0,
-			"contagem_por_usuario": bson.M{},
 		},
 	}
 	
@@ -47,23 +46,16 @@ func (r *CotaRepository) ObterCotaDoDia(ctx context.Context, data string) (*mode
 		return nil, err
 	}
 	
-	// Garantir que o mapa exista para evitar nil pointer panic
-	if cota.ContagemPorUsuario == nil {
-		cota.ContagemPorUsuario = make(map[string]int)
-	}
-
 	return &cota, nil
 }
 
-// IncrementarCota incrementa a cota global e do usuário específico de forma atômica.
-func (r *CotaRepository) IncrementarCota(ctx context.Context, data string, idUsuario primitive.ObjectID) error {
+// IncrementarCota incrementa a cota global de forma atômica.
+func (r *CotaRepository) IncrementarCota(ctx context.Context, data string) error {
 	filter := bson.M{"data": data}
-	usuarioKey := "contagem_por_usuario." + idUsuario.Hex()
 
 	update := bson.M{
 		"$inc": bson.M{
 			"contagem_global": 1,
-			usuarioKey:        1,
 		},
 	}
 

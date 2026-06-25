@@ -19,7 +19,6 @@ const (
 // Letra espelha a coleção de Letras no MongoDB
 type Letra struct {
 	ID           primitive.ObjectID `bson:"_id,omitempty" json:"id,omitempty"`
-	IDUsuario    primitive.ObjectID `bson:"id_usuario,omitempty" json:"id_usuario,omitempty"`
 	Artista      string             `bson:"artista" json:"artista"`
 	Titulo       string             `bson:"titulo" json:"titulo"`
 	Conteudo     string             `bson:"conteudo,omitempty" json:"conteudo,omitempty"`

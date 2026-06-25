@@ -84,39 +84,25 @@ func (w *LyricsWorker) processarFila() {
 		return
 	}
 
-	// 1. Obter quem está na fila
-	usuariosPendentes, err := w.letraRepo.BuscarUsuariosComPendencias(ctx)
-	if err != nil {
-		w.logger.Error("Erro ao buscar usuários com pendências", "erro", err)
-		return
-	}
-
-	if len(usuariosPendentes) == 0 {
-		w.logger.Info("Fila vazia. Nada a processar.")
-		return
-	}
-
-	// 2. Executar Round Robin de forma Calma
-	for _, idUsuario := range usuariosPendentes {
-		// Verificar Cota Individual
-		strID := idUsuario.Hex()
-		cotaUsuario := cotaDiaria.ContagemPorUsuario[strID]
-		if cotaUsuario >= config.Config.MaxPerUserQuota {
-			w.logger.Debug("Cota máxima atingida para o usuário", "usuario", strID)
-			continue
-		}
-
+	// 1. Executar processamento de lote (ex: até 10 músicas por ciclo)
+	batchSize := 10
+	for i := 0; i < batchSize; i++ {
 		// Trava a letra de forma atômica
-		letra, err := w.letraRepo.BuscarMusicaPendentePorUsuario(ctx, idUsuario)
+		letra, err := w.letraRepo.BuscarMusicaPendente(ctx)
 		if err != nil {
 			if errors.Is(err, repository.ErrNoPendingLyrics) {
-				continue
+				if i == 0 {
+					w.logger.Info("Fila vazia. Nada a processar.")
+				} else {
+					w.logger.Info("Não há mais músicas pendentes na fila.")
+				}
+				break
 			}
-			w.logger.Error("Erro ao buscar/travar música para usuário", "usuario", strID, "erro", err)
+			w.logger.Error("Erro ao buscar/travar música", "erro", err)
 			continue
 		}
 
-		w.logger.Info("Processando música", "titulo", letra.Titulo, "artista", letra.Artista, "usuario", strID)
+		w.logger.Info("Processando música", "titulo", letra.Titulo, "artista", letra.Artista)
 
 		// Buscar letra nos provedores
 		res, err := w.fallbackManager.FetchLyrics(ctx, letra.Artista, letra.Titulo)
@@ -148,8 +134,8 @@ func (w *LyricsWorker) processarFila() {
 			w.logger.Error("Erro ao salvar resultado da música", "erro", err)
 		}
 
-		// Incrementar a cota global e do usuário
-		err = w.cotaRepo.IncrementarCota(ctx, dataHoje, idUsuario)
+		// Incrementar a cota global
+		err = w.cotaRepo.IncrementarCota(ctx, dataHoje)
 		if err != nil {
 			w.logger.Error("Erro ao incrementar cota", "erro", err)
 		}
@@ -161,7 +147,7 @@ func (w *LyricsWorker) processarFila() {
 			return
 		}
 
-		// JITTER / PAUSA HUMANA: Espera 5 segundos antes de avançar pro próximo usuário do Round Robin
+		// JITTER / PAUSA HUMANA: Espera 5 segundos antes de avançar pra próxima música
 		w.logger.Debug("Aplicando Jitter de 5s...")
 		time.Sleep(5 * time.Second)
 	}
