@@ -23,6 +23,7 @@ type Letra struct {
 	Titulo       string             `bson:"nome_musica" json:"nome_musica"`
 	Conteudo     string             `bson:"texto_letra,omitempty" json:"texto_letra,omitempty"`
 	Sincronizada bool               `bson:"sincronizada" json:"sincronizada"`
+	Fonte        string             `bson:"fonte_letra" json:"fonte_letra"`
 	Status       StatusLetra        `bson:"status" json:"status"`
 	CriadoEm     time.Time          `bson:"criado_em" json:"criado_em"`
 	AtualizadoEm time.Time          `bson:"atualizado_em" json:"atualizado_em"`

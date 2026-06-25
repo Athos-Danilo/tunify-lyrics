@@ -29,13 +29,14 @@ func (fm *FallbackManager) FetchLyrics(ctx context.Context, artista, titulo stri
 		
 		res, err := provider.Fetch(ctx, artista, titulo)
 		if err == nil && res != nil {
+			res.Fonte = provider.Name()
 			fm.logger.Info("Letra encontrada", "provedor", provider.Name(), "sincronizada", res.Sincronizada)
 			return res, nil
 		}
 
-		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
-			fm.logger.Error("Busca cancelada ou tempo excedido", "erro", err)
-			return nil, err
+		if ctx.Err() != nil {
+			fm.logger.Error("Contexto global cancelado ou tempo excedido", "erro", ctx.Err())
+			return nil, ctx.Err()
 		}
 
 		// Se não encontrou ou deu erro (ex: timeout interno do provedor), loga e tenta o próximo

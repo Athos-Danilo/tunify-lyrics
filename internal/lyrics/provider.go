@@ -7,8 +7,9 @@ import (
 
 // Result contém a letra encontrada e uma flag indicando se ela possui sincronia
 type Result struct {
-	Letra       string
+	Letra        string
 	Sincronizada bool
+	Fonte        string
 }
 
 // LyricsProvider define o contrato para os motores de busca de letras

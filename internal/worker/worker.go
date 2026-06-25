@@ -115,6 +115,7 @@ func (w *LyricsWorker) processarFila() {
 		status := model.StatusConcluido
 		conteudo := ""
 		sincronizada := false
+		fonte := ""
 
 		if strings.TrimSpace(letra.Titulo) == "" || strings.TrimSpace(letra.Artista) == "" {
 			w.logger.Warn("Título ou artista vazios, ignorando busca", "titulo", letra.Titulo, "artista", letra.Artista)
@@ -132,17 +133,18 @@ func (w *LyricsWorker) processarFila() {
 					w.logger.Error("Erro de comunicação com o provedor. Abortando lote.", "erro", err)
 					
 					// Reverte o status para PENDENTE (fallback de segurança) para processar na próxima
-					_ = w.letraRepo.AtualizarStatusMusica(ctx, letra.ID, model.StatusPendente, "", false)
+					_ = w.letraRepo.AtualizarStatusMusica(ctx, letra.ID, model.StatusPendente, "", false, "")
 					return 
 				}
 			} else {
 				conteudo = res.Letra
 				sincronizada = res.Sincronizada
+				fonte = res.Fonte
 			}
 		}
 
 		// Salvar o resultado
-		err = w.letraRepo.AtualizarStatusMusica(ctx, letra.ID, status, conteudo, sincronizada)
+		err = w.letraRepo.AtualizarStatusMusica(ctx, letra.ID, status, conteudo, sincronizada, fonte)
 		if err != nil {
 			w.logger.Error("Erro ao salvar resultado da música", "erro", err)
 		}

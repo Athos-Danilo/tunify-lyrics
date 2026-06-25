@@ -59,15 +59,24 @@ func (r *LetraRepository) BuscarMusicaPendente(ctx context.Context) (*model.Letr
 }
 
 // AtualizarStatusMusica atualiza a letra após processamento (encontrada ou não).
-func (r *LetraRepository) AtualizarStatusMusica(ctx context.Context, id interface{}, status model.StatusLetra, conteudo string, sincronizada bool) error {
+func (r *LetraRepository) AtualizarStatusMusica(ctx context.Context, id interface{}, status model.StatusLetra, conteudo string, sincronizada bool, fonte string) error {
 	filter := bson.M{"_id": id}
+	
+	setFields := bson.M{
+		"status":        status,
+		"texto_letra":   conteudo,
+		"sincronizada":  sincronizada,
+		"atualizado_em": time.Now(),
+	}
+	
+	if fonte != "" {
+		setFields["fonte_letra"] = fonte
+	} else {
+		setFields["fonte_letra"] = nil
+	}
+
 	update := bson.M{
-		"$set": bson.M{
-			"status":        status,
-			"texto_letra":   conteudo,
-			"sincronizada":  sincronizada,
-			"atualizado_em": time.Now(),
-		},
+		"$set": setFields,
 	}
 
 	_, err := r.collection.UpdateOne(ctx, filter, update)
