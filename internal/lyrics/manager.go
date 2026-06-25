@@ -2,7 +2,6 @@ package lyrics
 
 import (
 	"context"
-	"errors"
 	"log/slog"
 )
 
